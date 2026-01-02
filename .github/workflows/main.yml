@@ -1,0 +1,55 @@
+name: CI/CD – MCP Weather Assistant (Docker + EC2)
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Checkout repository
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      # 2️⃣ Build Docker image (CI step)
+      - name: Build Docker image
+        run: |
+          docker build -t weather-mcp:latest .
+
+      # 3️⃣ Configure SSH for EC2 access
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      # 4️⃣ Copy project files to EC2
+      - name: Copy project to EC2
+        run: |
+          rsync -av --delete \
+            --exclude='.git' \
+            --exclude='.github' \
+            ./ \
+            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/weather-mcp/
+
+      # 5️⃣ Deploy using Docker Compose (CD step)
+      - name: Deploy on EC2
+        run: |
+          ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            cd weather-mcp
+
+            echo "Stopping existing containers..."
+            docker-compose down || true
+
+            echo "Building new Docker image..."
+            docker build -t weather-mcp:latest .
+
+            echo "Starting containers..."
+            docker-compose up -d
+
+            echo "Deployment completed successfully"
+          EOF
