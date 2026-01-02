@@ -1,23 +1,7 @@
-<<<<<<< HEAD
 fastapi
 uvicorn
-requests
+httpx
 python-dotenv
 mcp
 streamlit
-httpx
 openai
-firecrawl-py
-ragie
-=======
-fastapi
-uvicorn
-requests
-python-dotenv
-mcp
-streamlit
-httpx
-openai
-firecrawl-py
-ragie
->>>>>>> c20e537fcee224dea7d9a687014ff92d1212875a

@@ -3,8 +3,9 @@ services:
     build: .
     container_name: mcp-server
     command: uvicorn server:app --host 0.0.0.0 --port 8000
-    env_file:
-      - .env
+    environment:
+      - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY}
+      - OPENWEATHER_BASE_URL=${OPENWEATHER_BASE_URL}
     ports:
       - "8000:8000"
     restart: always
@@ -13,8 +14,9 @@ services:
     build: .
     container_name: streamlit-ui
     command: streamlit run agent_client.py --server.port 8501 --server.address 0.0.0.0
-    env_file:
-      - .env
+    environment:
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - SERVER_URL=http://mcp-server:8000/mcp/sse
     ports:
       - "8501:8501"
     depends_on:
