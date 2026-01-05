@@ -7,6 +7,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
@@ -15,9 +16,12 @@ jobs:
         run: docker build -t weather-mcp:latest .
 
       - name: Setup SSH
+        env:
+          EC2_DEPLOY_KEY: ${{ secrets.EC2_DEPLOY_KEY }}
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 700 ~/.ssh
+          echo "$EC2_DEPLOY_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
@@ -25,16 +29,25 @@ jobs:
         run: |
           rsync -av --delete -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
             --exclude='.git' --exclude='.github' ./ \
-            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/weather-mcp/
+            ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:${{ secrets.EC2_PATH }}
 
       - name: Deploy on EC2
         run: |
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
-            cd /home/ubuntu/weather-mcp &&
-            docker-compose down || true &&
-            cat > .env << 'EOF'
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'EOF'
+            cd ${{ secrets.EC2_PATH }}
+
+            echo "Stopping existing containers..."
+            docker-compose down || true
+
+            echo "Creating/Updating .env file..."
+            cat > .env << 'ENVEOF'
             OPENWEATHER_API_KEY=${{ secrets.OPENWEATHER_API_KEY }}
             OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}
-            EOF
-            docker-compose up -d --build &&
-            docker-compose ps"
+            ENVEOF
+
+            echo "Building and starting containers..."
+            docker-compose up -d --build
+
+            echo "Deployment completed successfully"
+            docker-compose ps
+          EOF
