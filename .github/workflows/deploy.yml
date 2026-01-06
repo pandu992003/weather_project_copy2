@@ -43,10 +43,8 @@ jobs:
 
             # 2. Update Environment Variables from Secrets
             echo "Creating .env file..."
-            cat > .env << 'ENVEOF'
-            OPENWEATHER_API_KEY=${{ secrets.OPENWEATHER_API_KEY }}
-            OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}
-            ENVEOF
+            echo "OPENWEATHER_API_KEY=${{ secrets.OPENWEATHER_API_KEY }}" > .env
+            echo "OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}" >> .env
 
             # 3. Restart Docker Containers
             echo "Stopping old containers..."
